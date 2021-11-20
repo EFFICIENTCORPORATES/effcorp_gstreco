@@ -1002,7 +1002,10 @@ def reco_itr_2a():
 
     gstr2a = pd.read_excel(files_con2a[0], sheet_name="Main_2A_Format",dtype={"Inv_CN_DN_Number_Final":str, "Inv_CN_DN_Date_Text":str, "Total_Tax":int})
 
-    gstr2a['Inv_CN_DN_Number_Finall'] = gstr2a["Inv_CN_DN_Number_Final"].apply(lambda x: x.lower())
+    try:
+        gstr2a['Inv_CN_DN_Number_Finall'] = gstr2a["Inv_CN_DN_Number_Final"].apply(lambda x: x.lower(str()))
+    except:
+        gstr2a['Inv_CN_DN_Number_Finall'] = gstr2a["Inv_CN_DN_Number_Final"]
 
     gstr2a['GST_INVNO_INVDATE_3_WAY'] = gstr2a['GSTIN_of_Supplier'] + "/" + gstr2a['Inv_CN_DN_Number_Finall'] + "/" + gstr2a['Inv_CN_DN_Date_Text']
 
@@ -1010,7 +1013,10 @@ def reco_itr_2a():
 
     gstr2a['GST_INVDATE_2_WAY'] = gstr2a['GSTIN_of_Supplier'] + "/" + gstr2a['Inv_CN_DN_Date_Text']
 
-    gstr2a['PAN_Number'] = gstr2a["GSTIN_of_Supplier"].apply(lambda x: x[2:12:1])
+    try:
+        gstr2a['PAN_Number'] = gstr2a["GSTIN_of_Supplier"].apply(lambda x: x[2:12:1])
+    except:
+        gstr2a['PAN_Number'] = gstr2a["GSTIN_of_Supplier"]
 
     # the PAN number matches will be used as possible matches
 
@@ -1024,7 +1030,10 @@ def reco_itr_2a():
 
     itr = pd.read_excel(files_itr[0], sheet_name="Main_ITR_Format",dtype={"Invoice_Number":str, "Invoice_Date_Text":str,"Total_Tax":int})
 
-    itr["Invoice_Numberl"] = itr["Invoice_Number"].apply(lambda x: x.lower())
+    try:
+        itr["Invoice_Numberl"] = itr["Invoice_Number"].apply(lambda x: x.lower(str()))
+    except:
+        itr["Invoice_Numberl"] = itr["Invoice_Number"]
 
     itr["GST_INVNO_INVDATE_3_WAY"] = itr["Vendor_GST_REG"] + "/" + itr["Invoice_Numberl"] + "/" + itr[
         "Invoice_Date_Text"]
@@ -1033,7 +1042,10 @@ def reco_itr_2a():
 
     itr["GST_INVDATE_2_WAY"] = itr["Vendor_GST_REG"] + "/" + itr["Invoice_Date_Text"]
 
-    itr["PAN_Number"] = itr["Vendor_GST_REG"].apply(lambda x: x[2:12:1])
+    try:
+        itr["PAN_Number"] = itr["Vendor_GST_REG"].apply(lambda x: x[2:12:1])
+    except:
+        itr["PAN_Number"] = itr["Vendor_GST_REG"]
 
     # the PAN number matches will be used as possible matches
 
@@ -1048,17 +1060,7 @@ def reco_itr_2a():
     ws["E7"].value = list(itr.shape)[0]
     ws["F7"].value = sum(itr["Total_Tax"])
 
-    #***Explanation*** of the matching Process being done
-    #How Matchig being Done? So first make the pivot table with 3 way in ROw. Renaming of Column Heading and Reseting Index reuqired
-    #The, merge the GSTR2A and the iTR pivot table and compute the differences.
-    #now the cases of Difference within the Tolerance limit are filtered out using the .value==Exact Match Within Tolerance""
-    #then we get the list of these exact matching cases in a list using mask.
-    #now, this list ka mask is applied to the main GSTR2a and the ITR and a new data frame is taken mask1a and mask1b is created for 2A and ITR respectively
-    #All such matched dataframe are appended at last using the pd.concat function
-    #And balance remaining is taken out using ~mask function. 
-    #NOw in this  balance GSTR2A and ITR, again the above process is repeated by taking the GSTR 2 way matching and PAN matching so on
-
-    #First Cut Matching : Here we will try to do that Matching based on 3 way i.e GST No, Inv No & Inv Date being same in ITR & GSTR2A
+    # First Cut Matching : Here we will try to do that Matching based on 3 way i.e GST No, Inv No & Inv Date being same in ITR & GSTR2A
 
     gstr2a_pivot = pd.pivot_table(gstr2a, values="Total_Tax", index=["GST_INVNO_INVDATE_3_WAY"], aggfunc=np.sum)
 
@@ -1474,6 +1476,39 @@ def reco_itr_2a():
 
     messagebox.showinfo('Output', f'Matching has been done and saved in below path \n {fullpath2}\n Click on OK')
 
+def download():
+    import pandas as pd
+    import numpy as np
+    import openpyxl
+    global fullpath
+    global filepath
+
+    global files_itr
+    global files_con2a
+    global files_mon2a
+
+
+    pth = os.getcwd()
+
+    fullpath1 = pth + "\\" + "Formats.xlsx"
+    print(fullpath1)
+
+    writer = pd.ExcelWriter(fullpath1, engine='xlsxwriter', options={'strings_to_formulas': True})
+
+    dict1 = {"Vendor_GST_REG": ["Mandatory"], "Vendor_Name": ["Optional"], "Invoice_Number": ["Mandatory"],
+             "Invoice_Date_Text": ["Mandatory"], "Total_Tax": ["Mandatory"], "IGST": ["Optional"], "SGST": ["Optional"],
+             "CGST": ["Optional"], "UTGST": ["Optional"],"User Defined1":["Optional"],"User Defined2":["Optional"],"User Defined3":["Optional"],"User Defined4":["Optional"]}
+
+    df1 = pd.DataFrame(dict1)
+    df1.to_excel(writer, sheet_name="Main_ITR_Format", index=False)
+
+    dict2={"GSTIN_of_Supplier":["Mandatory"],"Inv_CN_DN_Number_Final":["Mandatory"],"Legal_Name_Of Supplier":["Optional"],"Inv_CN_DN_Date_Text":["Mandatory"],"Total_Tax":["Mandatory"],"IGST":["Optional"],"SGST":["Optional"],"CGST":["Optional"],"UTGST":["Optional"],"User Defined1":["Optional"],"User Defined2":["Optional"],"User Defined3":["Optional"],"User Defined4":["Optional"]}
+    df2 = pd.DataFrame(dict2)
+    df2.to_excel(writer, sheet_name="Main_2A_Format", index=False)
+
+    writer.save()
+    messagebox.showinfo('Output', f'The Formats have been saved in below path \n {fullpath1}\n Click on OK')
+
 
 # Below is the arrangement of the Text and the Button in Tkinter.
 
@@ -1499,6 +1534,13 @@ label_0.pack()
 Browsebutton = Button(FotaGui, width=20, text="Combine GSTR2A Files", command=Combine_GSTR2A_File2)
 Browsebutton.pack()
 
+
+label_0 = Label(FotaGui, text='\n Download the Format of GSTR2A and the Purchase Register',
+                font='Times 12', bd=1, relief='solid', anchor=N)
+label_0.pack()
+
+Browsebutton = Button(FotaGui, width=15, text="Download Format", command=download)
+Browsebutton.pack()
 
 label_0 = Label(FotaGui, text='\n If you already have the merged GSTR2A and Purchase Register , \n Follow the below Simple 2 steps for doing the GSTR2A reconcilitaion!!!',
                 font='Times 12', bd=1, relief='solid', anchor=N)
