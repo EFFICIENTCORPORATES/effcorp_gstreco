@@ -167,107 +167,87 @@ def file_path_itr():
     return files_itr
 
 
-def sendtofile(colslist, filepath):
-    df = pd.read_excel(filepath)
-    cols = e_1.get()
-    pth = os.path.dirname(filepath)
-    colslist = list(set(df[cols].values))
-    global now
+
+def sendtofile(colslist, files_itr):
+    try:
+
+        df = pd.read_excel(files_itr[0],sheet_name="Unmatched_ITR")
+    except:
+        df = pd.read_excel(files_itr[0],sheet_name=0)
+    
+    pth = os.path.dirname(files_itr[0])
+    
+    colslist = list(set(df["Vendor_GST_REG"].values))
+
 
     for i in colslist:
-        df[df[cols] == i].to_excel("{}/{}.xlsx".format(pth, i), sheet_name=i, index=False)
+        df[df["Vendor_GST_REG"] == i].to_excel("{}/{}.xlsx".format(pth, i), sheet_name=i, index=False)
 
     messagebox.showinfo('Output',
                         'You data has been split into {} and {} files has been created.Click OK. \n All Files stored in same folder'.format(
                             ', '.join(colslist), len(colslist)))
 
-    label_head7 = Label(LogGui,
-                        text='{n}The Files have been Splitted to different Files.'.format(
-                            n=now.strftime('%y-%m-%d %H:%M:%S')),
-                        bd=1, relief='solid',
-                        font='Times 10', anchor=N)
-    label_head7.pack()
-
-    print('\nCompleted')
-    print('Thanks for using this program.')
     return
+
+
 
 
 def SPLIT_FILE():
     global filepath
-    global e_1
-    global e_2
+    global files_itr
+    global files_itr
+    global files_con2a
+    global files_mon2a
 
-    splitwin = Tk()
+    global label_head7
+    filepath = StringVar()
+    global now
 
-    label_1 = Label(splitwin, text='Enter the Exact Column name whose value u want to Split')
-    label_1.pack()
-    e_1 = Entry(splitwin, width=50, bg='blue', fg='white', borderwidth=4)
-    e_1.pack()
+    now = datetime.datetime.now()
 
-    Browsebutton = Button(splitwin, width=20, text="Split Files", command=SPLIT_FILE2)
-    Browsebutton.pack()
-
-    splitwin.mainloop()
-
-
-def SPLIT_FILE2():
-    df = pd.read_excel(filepath)
-    cols = e_1.get()
-    colslist = list(set(df[cols].values))
-
-    messagebox.showinfo('Check the output',
-                        'You data will split based on these values {} and create {} files or sheets based on next selection. If you are ready to proceed Click OK or close the dialog box to re-start.'.format(
-                            ', '.join(colslist), len(colslist)))
-
-    response = messagebox.askyesno('Split Files',
-                                   'Do you want to split in Various Sheets in Same file  OR Different Files? '
-                                   '\nClick Yes for Various Sheets in Same File.!'
-                                   '\n CLick No For Different Files')
-    df = pd.read_excel(filepath)
-    cols = e_1.get()
-    colslist = list(set(df[cols].values))
-
-    if response == 0:
-        sendtofile(colslist, filepath)
-    elif response == 1:
-        sendtosheet(colslist)
+    # Fetch the file path of the hex file browsed.
+    if (filepath == ""):
+        filepath = filedialog.askopenfilename(initialdir=os.getcwd(),
+                                              title="Select a file",
+                                              filetypes=[("All Files", "*.*"), ("Pdf Files", "*.pdf"),
+                                                         ("Text Files", "*.txt"), ("Excel FIles", "*.xlsx")])
     else:
-        messagebox.showerror('Output', "Something went wrong")
+        filepath = filedialog.askopenfilename(initialdir=filepath,
+                                              title="Select a file",
+                                              filetypes=[("All Files", "*.*"), ("Pdf Files", "*.pdf"),
+                                                         ("Text Files", "*.txt"), ("Excel FIles", "*.xlsx")])
 
-
-def sendtosheet(colslist):
-    cols = e_1.get()
     extension = os.path.splitext(filepath)[1]
     filename = os.path.splitext(filepath)[0]
     pth = os.path.dirname(filepath)
-    newfile = os.path.join(pth, filename + '_Sheet_Split_Auto' + extension)
-    df = pd.read_excel(filepath)
-    colslist = list(set(df[cols].values))
+    files_itr = glob.glob(os.path.join(pth, '*{ext}'.format(ext=extension)))
+    files_itr = list(map(lambda st: str.replace(st, "\\", "/"), files_itr))
 
-    copyfile(filepath, newfile)
-    for j in colslist:
-        writer = pd.ExcelWriter(newfile, engine='openpyxl')
-        for myname in colslist:
-            mydf = df.loc[df[cols] == myname]
-            mydf.to_excel(writer, sheet_name=myname, index=False)
-        writer.save()
+    for f in files_itr:
+        label_head7 = Label(LogGui, text='{n}The File {fil} have been selected.'.format(fil=f, n=now.strftime(
+            '%y-%m-%d %H:%M:%S')), bd=1, relief='solid',
+                            font='Times 10', anchor=N)
+        label_head7.pack()
 
-    messagebox.showinfo('Output',
-                        'You data has been split into {} and {} sheets has been created under single file named {new}.\n Click on OK .'.format(
-                            ', '.join(colslist), len(colslist), new=newfile))
+    
+    print(files_itr)
+    
+    try:
 
-    label_head7 = Label(LogGui,
-                        text='{n}The Files have been Splitted to different sheets.'.format(
-                            n=now.strftime('%y-%m-%d %H:%M:%S')),
-                        bd=1, relief='solid',
-                        font='Times 10', anchor=N)
-    label_head7.pack()
+        df = pd.read_excel(files_itr[0],sheet_name="Unmatched_ITR")
+    except:
+        df = pd.read_excel(files_itr[0],sheet_name=0)
+    
 
-    print('\nCompleted')
-    print('Thanks for using this program.')
-    return
+    colslist = list(set(df["Vendor_GST_REG"].values))
 
+    messagebox.showinfo('Check the output',
+                        'You data will split based on these values {} and create {} files. If you are ready to proceed Click OK or close the dialog box to re-start.'.format(
+                            ', '.join(colslist), len(colslist)))
+
+
+    sendtofile(colslist, files_itr)
+    
 
 def Combine_GSTR2A_File2():
     import pandas as pd
@@ -1582,13 +1562,13 @@ label_20.pack()
 Browsebutton = Button(FotaGui, width=20, text="Reconcile GSTR2A vs ITR", command=reco_itr_2a)
 Browsebutton.pack()
 
-# label_0 = Label(FotaGui, text='\n To split the Unmatched Purchase Register GSTN Wise, click on Split Files !!!',
-#                 font='Times 12', anchor=N)
-# label_0.pack()
+label_0 = Label(FotaGui, text='\n To split the Unmatched Purchase Register GSTN Wise, click on Split Files !!!',
+                font='Times 12', anchor=N)
+label_0.pack()
 
-#
-# Browsebutton = Button(FotaGui, width=30, text="Split Unmatched Purchase Register", command=SPLIT_FILE)
-# Browsebutton.pack()
+
+Browsebutton = Button(FotaGui, width=30, text="Split Unmatched Purchase Register", command=SPLIT_FILE)
+Browsebutton.pack()
 
 label_head11 = Label(LogGui, text='Log of all Activities:', anchor=W)
 label_head11.pack()
